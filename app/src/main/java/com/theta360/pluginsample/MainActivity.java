@@ -17,6 +17,7 @@
 package com.theta360.pluginsample;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBar;
 import android.view.KeyEvent;
@@ -28,8 +29,21 @@ import com.theta360.pluginlibrary.values.LedColor;
 import com.theta360.pluginlibrary.values.LedTarget;
 
 public class MainActivity extends PluginActivity implements CameraFragment.CFCallback {
+    private static final int MAX_SHUTTER_INTERVAL = 10 * 60 * 1000; // 10 minute
+    private static final int BLINK_INTERVAL = 2000;
+
+    private final Handler handler = new Handler();
+    private final Runnable takePictureRunnable = new Runnable() {
+        @Override
+        public void run() {
+            takePicture();
+            handler.postDelayed(this, (long) (MAX_SHUTTER_INTERVAL * Math.random()));
+        }
+    };
+
     private boolean isVideo = false;
     private boolean isEnded = false;
+    private boolean isRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +68,16 @@ public class MainActivity extends PluginActivity implements CameraFragment.CFCal
                             notificationAudioWarning();
                         }
                     } else {
-                        takePicture();
+                        if (!isRunning) {
+                            notificationLedBlink(LedTarget.LED4, null, BLINK_INTERVAL);
+                            handler.postDelayed(takePictureRunnable, (long) (MAX_SHUTTER_INTERVAL * Math.random()));
+                            isRunning = true;
+                        }
+                        else {
+                            notificationLedShow(LedTarget.LED4);
+                            handler.removeCallbacks(takePictureRunnable);
+                            isRunning = false;
+                        }
                     }
                 }
             }
